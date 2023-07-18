@@ -1,8 +1,8 @@
 package main
 
 import (
-	"archive/tar"
 	"fmt"
+	"github.com/beevik/etree"
 	"log"
 	"os"
 	"path/filepath"
@@ -23,40 +23,38 @@ Only a single path at a time is allowed`)
 	}
 
 	args := os.Args[1]
-	fmt.Printf("here are some args:\n%s", args)
+	fmt.Printf("here are some args:\n%s\n", args)
 	cwd, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Could not get working directory")
 	}
 	// Need to look for a file that includes a file with a mets.
 	// The mets will have a uuid: mets.<uuid>.xml
-	dataPath := filepath.Join(cwd, path, "data")
+	dataPath := filepath.Join(cwd, os.path, "data")
 	cwd = dataPath
 	dir, err := os.ReadDir(dataPath)
-	if err != nil {
+	if err != nil {:
 		log.Fatalf("This path does not exist.")
 	}
-	var entry os.DirEntry
+	var entry os.DirEntry:w
+	q
 	for _, dEntry := range dir {
 		if strings.Contains(dEntry.Name(), "mets") && !dEntry.IsDir() {
 			entry = dEntry
 			break
 		}
 	}
-	mets, err := os.Open(entry.Name())
-	defer func {
-		err := mets.Close()
-		if err != nil {
-			log.Fatal("Failed to close the mets file.")
-		}
-	}()
-	if err != nil {
-		log.Fatalf("Could not open %s", entry.Name())
-	}
-	// We want to read the file
-	r := tar.NewReader(mets)
-	_ = r
 
+	// Create and parse the mets xml file.
+	mets := etree.NewDocument()
+	if err := mets.ReadFromFile(entry.Name()); err != nil {
+		log.Fatalf("Could not parse the mets into an xml file. %v", err)
+	}
+	root := mets.SelectElement("mets:mets")
+	// We need to get all the premis elements from the mets and count them.
+	for i, premisEvent := range root.SelectElements("premis:eventType") {
+		fmt.Printf("%d %s", i, &premisEvent)
+	}
 	// TODO: We need to loop over the archive to find the mets file.
 	// Which should be in the top level of the data directory.
 
