@@ -1,7 +1,10 @@
 package main
 
 import (
+	"archive/tar"
+	"archive/zip"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -9,6 +12,12 @@ import (
 
 	"github.com/beevik/etree"
 	z7 "github.com/bodgit/sevenzip"
+)
+
+const (
+	ZIP = ".zip"
+	TAR = ".tar"
+	Z7  = ".7z"
 )
 
 func main() {
@@ -33,49 +42,121 @@ Only a single path at a time is allowed`)
 	// The mets will have a uuid: mets.<uuid>.xml
 	// If this is a tar file or zip or 7z we need to extract and read from that directory before going to the data directory
 	absPath := filepath.Join(cwd, path)
+	_ = absPath
+	//TODO: There might be an option to create a unified interface for archives (tar, zip, and 7zip)
 	ext := filepath.Ext(path)
-	switch ext {
-	case ".zip":
-		fmt.Print("Using a zip")
-		fallthrough
-	case ".tar":
-		fmt.Print("or using a tar")
-		fallthrough
-	case ".7z":
 
+	dst, err := os.MkdirTemp(cwd, "metsFolder")
+	dataPath := filepath.Join(dst, "data")
+	var tmpMets *os.File
+	defer func() {
+		if tmpMets != nil {
+			err := tmpMets.Close()
+			if err != nil {
+				log.Fatal("Failed to close tmp")
+			}
+		}
+	}()
+	fmt.Printf("This is the data path %s\n", dataPath)
+	// cwd = dataPath
+	switch ext {
+	case ZIP:
+		archive, err := zip.OpenReader(absPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		// You can defer and handle and error by wrapping a function in an anonymous function. This way we can have defer blocks!
+		defer func() {
+			err := archive.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
+
+		for _, f := range archive.File {
+			if strings.Contains(f.Name, "mets") {
+				tmpMets, err = os.CreateTemp(dst, f.Name)
+				if err != nil {
+					log.Fatal(err)
+				}
+				file, err := f.Open()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				if _, err := io.Copy(tmpMets, file); err != nil {
+					log.Fatal("Could not copy the mets")
+				}
+				break
+			}
+		}
+	case Z7:
+		// A bit of code duplication here, I wonder if this really is the best way
 		archive, err := z7.OpenReader(absPath)
 		if err != nil {
-			log.Fatalf("Could not open archive %s. got:\n %v", absPath, err)
+			fmt.Println("here")
+			log.Fatal(err)
 		}
+		defer func() {
+			err := archive.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
 		for _, f := range archive.File {
-			fmt.Printf("%v\n", f)
+			if strings.Contains(f.Name, "mets") {
+				tmpMets, err = os.CreateTemp(dst, f.Name)
+				if err != nil {
+					log.Fatal(err)
+				}
+				file, err := f.Open()
+				if err != nil {
+					log.Fatal(err)
+				}
+				if _, err := io.Copy(tmpMets, file); err != nil {
+					log.Fatal("Could not copy the mets")
+				}
+				break
+			}
 		}
-
+	case TAR:
+		r, err := os.Open(absPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		archive := tar.NewReader(r)
+		for {
+			h, err := archive.Next()
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				panic(err)
+			}
+			if strings.Contains(h.Name, "mets") {
+				tmpMets, err = os.CreateTemp(dst, h.Name)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if _, err := io.Copy(tmpMets, archive); err != nil {
+					log.Fatal("Could not copy the mets")
+				}
+				break
+			}
+		}
 	default:
-		fmt.Print("ahhhhhhhhhhhhh")
+		// In the default case it could be that the folder path we were sent was not compressed or that it is in a format that is not recognized.
+		log.Fatal("Currently only compressed files are supported")
 	}
-	dataPath := filepath.Join(cwd, path, "data")
-	// if err != nil {
-	// 	log.Fatalf("The relative path could not be found. path: %s\ndatapath: %s\ncwd: %s\n", path, dataPath, cwd)
-	// }
-	fmt.Printf("This is the path %s\n", dataPath)
-	cwd = dataPath
-	dir, err := os.ReadDir(cwd)
-	if err != nil {
-		log.Fatalln("This path does not exist.")
-	}
-	var entry os.DirEntry
-
-	for _, dEntry := range dir {
-		if strings.Contains(dEntry.Name(), "mets") && !dEntry.IsDir() {
-			entry = dEntry
-			break
-		}
-	}
+	// Now that we are done copying all the mets files to the temp directory we can finally work on them!
 
 	// Create and parse the mets xml file.
+	if tmpMets == nil {
+		log.Fatal("Fuck this")
+	}
+	tmpMetsPath := filepath.Join(dst, tmpMets.Name())
 	mets := etree.NewDocument()
-	if err := mets.ReadFromFile(entry.Name()); err != nil {
+	if err := mets.ReadFromFile(tmpMetsPath); err != nil {
 		log.Fatalf("Could not parse the mets into an xml file. %v", err)
 	}
 	root := mets.SelectElement("mets:mets")
