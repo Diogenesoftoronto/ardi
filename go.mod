@@ -5,7 +5,6 @@ go 1.20
 require (
 	github.com/beevik/etree v1.2.0
 	github.com/bodgit/sevenzip v1.4.3
-	github.com/gen2brain/go-unarr v0.1.7
 )
 
 require (
