@@ -12,7 +12,8 @@ import (
 	z7 "github.com/bodgit/sevenzip"
 )
 
-func CopyMets(path string, dst string, tmp *os.File) error {
+func CopyMets(path string, dst string) (*os.File, error) {
+	var tmp *os.File
 	ext := filepath.Ext(path)
 
 	// Need to look for a file that includes a file with a mets.
@@ -23,7 +24,7 @@ func CopyMets(path string, dst string, tmp *os.File) error {
 	case ZIP:
 		archive, err := zip.OpenReader(path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// You can defer and handle and error by wrapping a function in an anonymous function. This way we can have defer blocks!
 		defer archive.Close()
@@ -32,11 +33,11 @@ func CopyMets(path string, dst string, tmp *os.File) error {
 			if strings.Contains(f.Name, "METS") {
 				tmp, err = os.Create(filepath.Join(dst, filepath.Base(f.Name)))
 				if err != nil {
-					return err
+					return nil, err
 				}
 				file, err := f.Open()
 				if err != nil {
-					return err
+					return tmp, err
 				}
 
 				if _, err := io.Copy(tmp, file); err != nil {
@@ -49,7 +50,7 @@ func CopyMets(path string, dst string, tmp *os.File) error {
 		// A bit of code duplication here, I wonder if this really is the best way
 		archive, err := z7.OpenReader(path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer archive.Close()
 
@@ -57,11 +58,11 @@ func CopyMets(path string, dst string, tmp *os.File) error {
 			if strings.Contains(f.Name, "METS") {
 				tmp, err = os.Create(filepath.Join(dst, filepath.Base(f.Name)))
 				if err != nil {
-					return err
+					return nil, err
 				}
 				file, err := f.Open()
 				if err != nil {
-					return err
+					return tmp, err
 				}
 				if _, err := io.Copy(tmp, file); err != nil {
 					log.Fatal("Could not copy the mets")
@@ -72,7 +73,7 @@ func CopyMets(path string, dst string, tmp *os.File) error {
 	case TAR:
 		r, err := os.Open(path)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer r.Close()
 		archive := tar.NewReader(r)
@@ -87,10 +88,10 @@ func CopyMets(path string, dst string, tmp *os.File) error {
 			if strings.Contains(h.Name, "mets") {
 				tmp, err = os.Create(filepath.Join(dst, filepath.Base(h.Name)))
 				if err != nil {
-					return err
+					return nil, err
 				}
 				if _, err := io.Copy(tmp, archive); err != nil {
-					log.Fatal("Could not copy the mets")
+					return tmp, err
 				}
 				break
 			}
@@ -100,5 +101,5 @@ func CopyMets(path string, dst string, tmp *os.File) error {
 		log.Fatal("Currently only compressed files are supported")
 	}
 	// Now that we are done copying all the mets files to the temp directory we can finally work on them!
-	return nil
+	return tmp, nil
 }
