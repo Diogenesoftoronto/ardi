@@ -3,6 +3,7 @@ package main
 import (
 	"archive/tar"
 	"archive/zip"
+	"errors"
 	"io"
 	"log"
 	"os"
@@ -96,9 +97,24 @@ func CopyMets(path string, dst string) (*os.File, error) {
 				break
 			}
 		}
+	case XML:
+		// This is the new branch for handling XML files
+		srcFile, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer srcFile.Close()
+
+		tmp, err = os.Create(filepath.Join(dst, filepath.Base(path)))
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := io.Copy(tmp, srcFile); err != nil {
+			return tmp, err
+		}
 	default:
-		// In the default case it could be that the folder path we were sent was not compressed or that it is in a format that is not recognized.
-		log.Fatal("Currently only compressed files are supported")
+		return nil, errors.New("Unsupported format or directory.")
 	}
 	// Now that we are done copying all the mets files to the temp directory we can finally work on them!
 	return tmp, nil
