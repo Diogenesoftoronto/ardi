@@ -18,7 +18,7 @@ const (
 func main() {
 	// Open the archive
 	argAmount := len(os.Args)
-	if argAmount < 3 {
+	if argAmount < 2 {
 		log.Fatalln(`There were not enough arguments.
 	 This command requires a path to be given.`)
 	} else if argAmount > 3 {
