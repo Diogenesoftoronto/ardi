@@ -1,8 +1,8 @@
 # Ardi the Archive-differ
 
-The archive differ is an application that takes a archived bag in the Bagit
-format, and checks the mets file for difference in comparison to another bag.
-If there are differences it will display the difference that bags have to
+The archive differ is an application that takes an archived bag in the Bagit
+format, and checks the METS file for difference in comparison to another bag.
+If there are differences between the preservation steps (outlined in the PREMIS) it will display the difference that bags have to
 the user in a useful and readable format.
 
 ## Installation
