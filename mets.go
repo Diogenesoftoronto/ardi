@@ -113,7 +113,15 @@ func CopyMets(path string, dst string) (*os.File, error) {
 		if _, err := io.Copy(tmp, srcFile); err != nil {
 			return tmp, err
 		}
+	case "":
+		_, err := os.ReadDir(path)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New("Directories are unsupported at the moment")
+
 	default:
+
 		return nil, errors.New("Unsupported format or directory.")
 	}
 	// Now that we are done copying all the mets files to the temp directory we can finally work on them!
