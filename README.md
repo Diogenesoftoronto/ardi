@@ -1,4 +1,4 @@
-# Archive-differ
+# Ardi the Archive-differ
 
 The archive differ is an application that takes a archived bag in the Bagit
 format, and checks the mets file for difference in comparison to another bag.
