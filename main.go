@@ -28,8 +28,9 @@ This command requires a path to be given.
 USAGE: ardiff <path> <*path...>
 			
 let * mean optional`)
-	} else if argAmount > 10 {
-		log.Fatalln(`There are too many arguments.
+	} else if argAmount%3 != 0 {
+		log.Fatalln(`There most be an even nu
+			
 
 Only two paths at a time is allowed`)
 	}
