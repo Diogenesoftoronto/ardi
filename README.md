@@ -14,14 +14,14 @@ Page](https://golang.org/dl/).
 You can install the binary quickly with:
 
 ```sh
-go install https://github.com/Diogenesoftoronto/ardi
+go install https://github.com/Diogenesoftoronto/ardi@latest
 ```
 
 ### Installation from source
 
 Clone the repository to your local machine, or download the source code as a zip:
 ```sh
-git clone https://github.com/Diogenesoftoronto/ardi@latest
+git clone https://github.com/Diogenesoftoronto/ardi
 ```
 Navigate into the project directory:
 
