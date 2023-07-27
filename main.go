@@ -2,29 +2,26 @@ package main
 
 import (
 	"encoding/csv"
-	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 
 	"github.com/beevik/etree"
+	"github.com/charmbracelet/log"
 )
 
 func main() {
 	// Open the archive
 	argAmount := len(os.Args)
 	if argAmount < 3 {
-		log.Fatalln(`There were not enough arguments.
+		log.Fatal(`There were not enough arguments.
 
 This command requires a path to be given.
 
-USAGE: ardi <path> <*path...>
-			
-let * mean optional`)
+USAGE: ardi <path> <path...>`)
 	} else if argAmount%3 != 0 {
-		log.Fatalln(`There most be an even number of arguments given
+		log.Fatal(`There must be an even number of arguments given
 			
 Only two paths at a time is allowed`)
 	}
@@ -39,10 +36,12 @@ Only two paths at a time is allowed`)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	csvF, err := os.Create(filepath.Join(dst, "Comparison_Report.csv"))
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Infof("The comparison report is located in %s", dst)
 	w := csv.NewWriter(csvF)
 	defer w.Flush()
 	// example result of the csv
@@ -99,15 +98,11 @@ Only two paths at a time is allowed`)
 		data[i].Events = make([]Event, eventTotal)
 		data[i].EventCount = eventTotal
 		for _, sec := range amdSecs {
-			fmt.Print(sec.Attr)
 			data[i].handleEvents(sec)
-			// fmt.Println(data[i].Events[0].ObjectName)
 		}
 		// Let's create two json files for each of the mets, call them the corresponding name of the mets files.
 		var f1, f2 *os.File
-		fmt.Println((i+1)%2 == 0)
 		if (i+1)%2 == 0 {
-			fmt.Print("hello world")
 			f1, err = os.Create(data[i-1].File + ".json")
 			if err != nil {
 				panic(err)
@@ -143,11 +138,13 @@ Only two paths at a time is allowed`)
 		}
 		diffCmd := exec.Command("diff", "-u", f1.Name(), f2.Name())
 		out, _ := diffCmd.Output()
-		// if err != nil {
-		// 	panic(err)
-		// }
+		if err != nil {
+			if _, ok := err.(*exec.ExitError); ok {
+				log.Warnf("Ardi found differences between %s and %s", f1.Name(), f2.Name())
+			}
+		}
 		if string(out) == "" {
-			fmt.Print("\nArdi found no differences. The Premis events are Identical.")
+			log.Info("Ardi found no differences. The Premis events are Identical.")
 			os.Exit(0)
 		}
 		ec1 := strconv.Itoa(data[i-1].EventCount)
@@ -165,7 +162,7 @@ Only two paths at a time is allowed`)
 
 	}
 	if err != nil {
-		log.Fatalln("Could not get working directory")
+		log.Fatal("Could not get working directory")
 	}
 
 }

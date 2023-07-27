@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/beevik/etree"
+	"github.com/charmbracelet/log"
 )
 
 type MetsData struct {
@@ -91,6 +92,7 @@ func (md *MetsData) handleEvents(amdSec *etree.Element) {
 		}
 
 		if event.Outcome {
+			log.Info("Yeah!")
 			md.SuccesCount++
 		}
 
