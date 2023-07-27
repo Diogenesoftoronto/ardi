@@ -14,7 +14,7 @@ Page](https://golang.org/dl/).
 You can install the binary quickly with:
 
 ```sh
-go install https://github.com/Diogenesoftoronto/ardi@latest
+go install github.com/Diogenesoftoronto/ardi@latest
 ```
 
 ### Installation from source
