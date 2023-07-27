@@ -48,9 +48,9 @@ var (
 	eventAmountPath = etree.MustCompilePath("//premis:event/premis:eventType")
 	// eventId         = etree.MustCompilePath(".//premis:event/premis:eventIdentifierValue")
 	agentPath       = etree.MustCompilePath(".//premis:agent/premis:agentIdentifier/premis:agentIdentifierValue")
-	eventDetailPath = etree.MustCompilePath("./premis:eventDetailInformation/eventDetail")
-	outcomePath     = etree.MustCompilePath("./premis:eventDetailInformation/eventOutcome")
-	oDetailPath     = etree.MustCompilePath("./premis:eventOutcomeDetail/eventOutcomeDetailNote")
+	eventDetailPath = etree.MustCompilePath("./premis:eventOutcomeInformation/premis:eventDetail")
+	outcomePath     = etree.MustCompilePath("./premis:eventOutcomeInformation/premis:eventOutcome")
+	oDetailPath     = etree.MustCompilePath("./premis:eventOutcomeDetail/premis:eventOutcomeDetailNote")
 )
 
 func (md *MetsData) handleEvents(amdSec *etree.Element) {
@@ -92,7 +92,6 @@ func (md *MetsData) handleEvents(amdSec *etree.Element) {
 		}
 
 		if event.Outcome {
-			log.Info("Yeah!")
 			md.SuccesCount++
 		}
 
