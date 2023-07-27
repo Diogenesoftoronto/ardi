@@ -21,7 +21,7 @@ go install https://github.com/Diogenesoftoronto/ardi
 
 Clone the repository to your local machine, or download the source code as a zip:
 ```sh
-git clone https://github.com/Diogenesoftoronto/ardi
+git clone https://github.com/Diogenesoftoronto/ardi@latest
 ```
 Navigate into the project directory:
 
