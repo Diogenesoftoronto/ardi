@@ -95,7 +95,6 @@ Only two paths at a time is allowed`)
 		// in order to save memory but I don't think that is worth it.
 
 		eventTotal := len(root.FindElementsPath(eventAmountPath))
-		data[i].Events = make([]Event, eventTotal)
 		data[i].EventCount = eventTotal
 		for _, sec := range amdSecs {
 			data[i].handleEvents(sec)
@@ -124,17 +123,13 @@ Only two paths at a time is allowed`)
 		if err != nil {
 			panic(err)
 		}
-		for _, ele := range json1 {
-			_, err = f1.Write(ele)
-			if err != nil {
-				panic(err)
-			}
+		_, err = f1.Write(json1)
+		if err != nil {
+			panic(err)
 		}
-		for _, ele := range json2 {
-			_, err = f2.Write(ele)
-			if err != nil {
-				panic(err)
-			}
+		_, err = f2.Write(json2)
+		if err != nil {
+			panic(err)
 		}
 		diffCmd := exec.Command("diff", "-u", f1.Name(), f2.Name())
 		out, _ := diffCmd.Output()

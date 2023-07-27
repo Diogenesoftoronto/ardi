@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/beevik/etree"
-	"github.com/charmbracelet/log"
 )
 
 type MetsData struct {
@@ -48,9 +47,9 @@ var (
 	eventAmountPath = etree.MustCompilePath("//premis:event/premis:eventType")
 	// eventId         = etree.MustCompilePath(".//premis:event/premis:eventIdentifierValue")
 	agentPath       = etree.MustCompilePath(".//premis:agent/premis:agentIdentifier/premis:agentIdentifierValue")
-	eventDetailPath = etree.MustCompilePath("./premis:eventOutcomeInformation/premis:eventDetail")
+	eventDetailPath = etree.MustCompilePath("./premis:eventDetailInformation/premis:eventDetail")
 	outcomePath     = etree.MustCompilePath("./premis:eventOutcomeInformation/premis:eventOutcome")
-	oDetailPath     = etree.MustCompilePath("./premis:eventOutcomeDetail/premis:eventOutcomeDetailNote")
+	oDetailPath     = etree.MustCompilePath("./premis:eventOutcomeInformation/premis:eventOutcomeDetail/premis:eventOutcomeDetailNote")
 )
 
 func (md *MetsData) handleEvents(amdSec *etree.Element) {
@@ -110,15 +109,11 @@ func (md *MetsData) handleEvents(amdSec *etree.Element) {
 	md.Agent = agent
 }
 
-func serializeEvents(e []Event) ([][]byte, error) {
-	jsd := make([][]byte, len(e))
-	var err error
-	for i := 0; i < len(e); i++ {
-		jsd[i], err = json.Marshal(e[i])
-		if err != nil {
-			return jsd, err
-		}
-
+func serializeEvents(e []Event) ([]byte, error) {
+	jsd, err := json.Marshal(e)
+	if err != nil {
+		return jsd, err
 	}
+
 	return jsd, nil
 }
