@@ -1,4 +1,4 @@
-module github.com/Diogenesoftoronto/archive-differ
+module github.com/Diogenesoftoronto/ardi
 
 go 1.20
 
