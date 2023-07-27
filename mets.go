@@ -13,6 +13,13 @@ import (
 	z7 "github.com/bodgit/sevenzip"
 )
 
+const (
+	ZIP = ".zip"
+	TAR = ".tar"
+	Z7  = ".7z"
+	XML = ".xml"
+)
+
 func CopyMets(path string, dst string) (*os.File, error) {
 	var tmp *os.File
 	ext := filepath.Ext(path)
