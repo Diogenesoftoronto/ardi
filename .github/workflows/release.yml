@@ -1,0 +1,44 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger the workflow on tags starting with 'v'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.x # Replace with your desired Go version
+
+      - name: Build binaries
+        run: |
+          go build .
+          # Add more build commands for other platforms if needed
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+
+      - name: Upload binaries
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./ardi # Replace with the path to your binary
+          asset_name: ardi # Replace with the desired asset name
+          asset_content_type: application/octet-stream
+
