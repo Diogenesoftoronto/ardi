@@ -2,85 +2,62 @@ package main
 
 import (
 	"encoding/csv"
+	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"strings"
+	"strconv"
 
 	"github.com/beevik/etree"
-)
-
-const (
-	ZIP = ".zip"
-	TAR = ".tar"
-	Z7  = ".7z"
-	XML = ".xml"
 )
 
 func main() {
 	// Open the archive
 	argAmount := len(os.Args)
-	if argAmount < 2 {
+	if argAmount < 3 {
 		log.Fatalln(`There were not enough arguments.
 
 This command requires a path to be given.
 
-USAGE: ardiff <path> <*path...>
+USAGE: ardi <path> <*path...>
 			
 let * mean optional`)
 	} else if argAmount%3 != 0 {
-		log.Fatalln(`There most be an even nu
+		log.Fatalln(`There most be an even number of arguments given
 			
-
 Only two paths at a time is allowed`)
 	}
-	// The paths that will be used are the args until the end of the array. We will actually test if they are all valid first.
+	// The paths that will be used are the args until the end of the
+	// array. We will actually test if they are all valid first.
 	cwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	dst, err := os.MkdirTemp(cwd, "METS_Data-")
+	dst, err := os.MkdirTemp(cwd, "Mets_Data-")
 	if err != nil {
 		log.Fatal(err)
 	}
-	// TODO: log a fatal error in every case other than the folder not being empty
-	// defer func() {
-	// 	err := os.Remove(dst)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// }()
-	csvF, err := os.Create(filepath.Join(dst, "ComparisonReport.csv"))
+	csvF, err := os.Create(filepath.Join(dst, "Comparison_Report.csv"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	w := csv.NewWriter(csvF)
 	defer w.Flush()
+	// example result of the csv
+	// file_1,file_2,events_1,events_2,agent_1,agent_2,eventCount_1,eventCount_2,successCount_1,successCount_2
+	// mets-2349.xml,mets-3453.xml,{[1:{"id":"<uuid>","format": "excel", "type": "creation", "outcome": "pass"}]},{[1:{"id":"<uuid>","format": "excel", "type": "creation", "outcome": "pass"}]},Archivematica,a3m,1,1,1,1
 	header := []string{
-		"file", "agent", "outcome", "type", "format"}
+		"file_1", "file_2", "event_diff", "agent_1", "agent_2", "eventCount_1", " eventCount_2", " successCount_1", " succussCount_2"}
 	err = w.Write(header)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// objectPath := etree.MustCompilePath("//premis:object//*")
-	eventPath := etree.MustCompilePath("//premis:event//*")
-	// TODO: add this to a configurable setting so that this can be changed
-	exclude := map[string]bool{
-		"eventIdentifier":                true,
-		"eventIdentifierType":            true,
-		"eventDateTime":                  true,
-		"linkingAgentIdentifierType":     true,
-		"linkingAgentIdentifier":         true,
-		"linkingAgentIdentifierValue":    false,
-		"objectIdentifier":               true,
-		"fixity":                         true,
-		"objectCharacteristicsExtension": true,
-	}
-
 	paths := os.Args[1:len(os.Args)]
-	for _, path := range paths {
+	data := make([]MetsData, len(paths))
+	for i, path := range paths {
 		absPath, err := filepath.Abs(path)
 		tmpMets, err := CopyMets(absPath, dst)
 		defer func() {
@@ -99,6 +76,7 @@ Only two paths at a time is allowed`)
 		}
 
 		metsFile := filepath.Base(tmpMets.Name())
+		data[i].File = metsFile
 		// Create and parse the mets xml file.
 		mets := etree.NewDocument()
 		if err := mets.ReadFromFile(tmpMets.Name()); err != nil {
@@ -109,51 +87,82 @@ Only two paths at a time is allowed`)
 		// Use the correct namespace URI in your SelectElement and SelectElements methods.
 		// These are placeholders and might need to be adjusted according to your XML.
 		// You can find the namespace URI in the XML file, it is the URL specified in the xmlns attribute.
-		// objs := root.FindElementsPath(objectPath)
-		events := root.FindElementsPath(eventPath)
-		var etype string
-		var outcome string
-		var agent string
-		var esize string
-		var format string
-		// var other string
-		// Find all premis:eventType elements
-		// for _, el := range objs {
-		// if _, excluded := exclude[el.Tag]; !excluded {
-		// fmt.Print(el.Text(), el.Tag)
+		// This is all the amd sections for each mets.
+		amdSecs := root.FindElementsPath(amdSecPath)
+		// We need to diff the events somehow, I am considering that we just use the difftool for now and then add the diff to the csv.
 
-		// record := []string{metsFile, agent, el.Text(), etype, format, esize, other}
-		// w.Write(record)
-		// }
-		// }
-		for _, el := range events {
-			if excluded := exclude[el.Tag]; !excluded {
-				switch el.Tag {
-				case "eventType":
-					etype = el.Text()
-					continue
-				case "linkingAgentIdentifierValue":
-					// TODO: make it configurable which agent identifier is allowed
-					if strings.Contains(el.Text(), "Archivematica") || strings.Contains(el.Text(), "a3m") {
-						agent = el.Text()
-						record := []string{metsFile, agent, outcome, etype, format, esize}
-						w.Write(record)
-					}
-					// case "eventDetail":
-					// other = el.Text()
-					// continue
-				case "eventOutcome":
-					// if strings.Contains(el.Text(), "pass") || strings.Contains(el.Text(), "fail") || el.Text() == "" {
-					outcome = el.Text()
-					continue
-					// }
-				default:
-					// record := []string{metsFile, agent, outcome, etype, format, esize, other}
-					// w.Write(record)
-				}
+		// At some point we could decide to go through all the events figureout how
+		// many there are before handling them and assigning an slice with that length
+		// in order to save memory but I don't think that is worth it.
 
+		eventTotal := len(root.FindElementsPath(eventAmountPath))
+		data[i].Events = make([]Event, eventTotal)
+		data[i].EventCount = eventTotal
+		for _, sec := range amdSecs {
+			fmt.Print(sec.Attr)
+			data[i].handleEvents(sec)
+			// fmt.Println(data[i].Events[0].ObjectName)
+		}
+		// Let's create two json files for each of the mets, call them the corresponding name of the mets files.
+		var f1, f2 *os.File
+		fmt.Println((i+1)%2 == 0)
+		if (i+1)%2 == 0 {
+			fmt.Print("hello world")
+			f1, err = os.Create(data[i-1].File + ".json")
+			if err != nil {
+				panic(err)
+			}
+			f2, err = os.Create(data[i].File + ".json")
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			continue
+		}
+		defer f1.Close()
+		defer f2.Close()
+		json1, err := serializeEvents(data[i-1].Events)
+		if err != nil {
+			panic(err)
+		}
+		json2, err := serializeEvents(data[i].Events)
+		if err != nil {
+			panic(err)
+		}
+		for _, ele := range json1 {
+			_, err = f1.Write(ele)
+			if err != nil {
+				panic(err)
 			}
 		}
+		for _, ele := range json2 {
+			_, err = f2.Write(ele)
+			if err != nil {
+				panic(err)
+			}
+		}
+		diffCmd := exec.Command("diff", "-u", f1.Name(), f2.Name())
+		out, _ := diffCmd.Output()
+		// if err != nil {
+		// 	panic(err)
+		// }
+		if string(out) == "" {
+			fmt.Print("\nArdi found no differences. The Premis events are Identical.")
+			os.Exit(0)
+		}
+		ec1 := strconv.Itoa(data[i-1].EventCount)
+		ec2 := strconv.Itoa(data[i].EventCount)
+		es1 := strconv.Itoa(data[i-1].SuccesCount)
+		es2 := strconv.Itoa(data[i].SuccesCount)
+		w.Write([]string{
+			data[i-1].File,
+			data[i].File,
+			string(out),
+			data[i-1].Agent,
+			data[i].Agent,
+			ec1, ec2, es1, es2,
+		})
+
 	}
 	if err != nil {
 		log.Fatalln("Could not get working directory")
