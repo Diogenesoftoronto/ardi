@@ -25,10 +25,6 @@ type Event struct {
 	Outcome       bool   `json:"outcome"` //can be empty, but this one is weird e.g. pass, Positive, etc.
 }
 
-type Conf struct {
-	Exclude map[string]bool
-}
-
 // The complete paths for all the necessary items are known at
 // compile time So they can be laid out here. And it should be
 // allowable to change in the configuration, but I don't think this is
@@ -110,7 +106,7 @@ func (md *MetsData) handleEvents(amdSec *etree.Element) {
 }
 
 func serializeEvents(e []Event) ([]byte, error) {
-	jsd, err := json.Marshal(e)
+	jsd, err := json.MarshalIndent(e, "", "\t")
 	if err != nil {
 		return jsd, err
 	}
