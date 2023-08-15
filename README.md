@@ -56,6 +56,7 @@ if it proves useful, it's feature set may include a text user interface.
 To use the application, run the following command with your METS file paths
 as arguments:
 
+* This assumes you have added ardi to your PATH variable. 
 ```sh
 ardi path1/to/metsfile.xml path2/to/metsfile.xml
 ```
@@ -66,6 +67,17 @@ Ardi can do multiple diffs at the same time but just make sure that you
 are giving Ardi a multiple of two. Otherwise it wont be able to compare the
 odd one.
 
+To add ardi to your path please do this for the bash shell:
+
+```sh
+export PATH=$PATH:/path/to/ardi/bin
+```
+
+Adding variables to the fish shell is even easier:
+
+```fish
+fish_add_path ardi /path/to/ardi/bin
+```
 ## Motivation 
 
 The reason this exists is to test different digital archiving

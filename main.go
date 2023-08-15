@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -48,14 +49,14 @@ Only two paths at a time is allowed`)
 	// file_1,file_2,events_1,events_2,agent_1,agent_2,eventCount_1,eventCount_2,successCount_1,successCount_2
 	// mets-2349.xml,mets-3453.xml,{[1:{"id":"<uuid>","format": "excel", "type": "creation", "outcome": "pass"}]},{[1:{"id":"<uuid>","format": "excel", "type": "creation", "outcome": "pass"}]},Archivematica,a3m,1,1,1,1
 	header := []string{
-		"file_1", "file_2", "event_diff", "agent_1", "agent_2", "eventCount_1", " eventCount_2", " successCount_1", " succussCount_2"}
+		"file_1", "file_2", "event_diff", "agent_1", "agent_2", "eventCount_1", " eventCount_2", "successCount_1", "successCount_2"}
 	err = w.Write(header)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	paths := os.Args[1:len(os.Args)]
-	data := make([]MetsData, len(paths))
+	data := make([]FileData, len(paths))
 	for i, path := range paths {
 		absPath, err := filepath.Abs(path)
 		tmpMets, err := CopyMets(absPath, dst)
@@ -102,11 +103,11 @@ Only two paths at a time is allowed`)
 		// Let's create two json files for each of the mets, call them the corresponding name of the mets files.
 		var f1, f2 *os.File
 		if (i+1)%2 == 0 {
-			f1, err = os.Create(data[i-1].File + ".json")
+			f1, err = os.Create(filepath.Join(dst, data[i-1].File+".json"))
 			if err != nil {
 				panic(err)
 			}
-			f2, err = os.Create(data[i].File + ".json")
+			f2, err = os.Create(filepath.Join(dst, data[i].File+".json"))
 			if err != nil {
 				panic(err)
 			}
@@ -149,11 +150,32 @@ Only two paths at a time is allowed`)
 		w.Write([]string{
 			data[i-1].File,
 			data[i].File,
-			string(out),
+			string(""),
 			data[i-1].Agent,
 			data[i].Agent,
 			ec1, ec2, es1, es2,
 		})
+		// After writing for the total counts for each mets file, we need to write the results for the other premi objects.
+		// We will need to loop through each object in the mets and output the results in the fields of the csv.
+		dd1, dd2 := convertAllEvents(data[i-1].Events, data[i-1].Agent), convertAllEvents(data[i].Events, data[i].Agent)
+		for k, v := range dd1 {
+			diffCmd := exec.Command("diff", "-u", fmt.Sprint(v.Events), fmt.Sprint(dd2[k].Events))
+			out, _ := diffCmd.Output()
+			if err != nil {
+				// if _, ok := err.(*exec.ExitError); ok {
+				log.Warnf("Ardi found differences between %s and %s for file %s", f1.Name(), f2.Name(), k)
+				// }
+
+			}
+			w.Write([]string{
+				k,
+				k,
+				string(out),
+				v.Agent,
+				fmt.Sprint(dd2[k].Agent),
+				fmt.Sprint(v.EventCount), fmt.Sprint(dd2[k].EventCount), fmt.Sprint(v.SuccessCount), fmt.Sprint(dd2[k].SuccessCount),
+			})
+		}
 
 	}
 	if err != nil {

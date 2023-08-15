@@ -2,12 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"strings"
 
 	"github.com/beevik/etree"
 )
 
-type MetsData struct {
+type FileData struct {
 	// Id          int
 	File        string //mets-342432.xml
 	Events      []Event
@@ -23,6 +24,13 @@ type Event struct {
 	Type          string `json:"type"`    //event type e.g. fixity check, creation
 	ObjectName    string `json:"name"`    //premisObjectOrginalName
 	Outcome       bool   `json:"outcome"` //can be empty, but this one is weird e.g. pass, Positive, etc.
+}
+
+type PremisData struct {
+	Events       []string
+	SuccessCount int
+	EventCount   int
+	Agent        string
 }
 
 // The complete paths for all the necessary items are known at
@@ -48,7 +56,7 @@ var (
 	oDetailPath     = etree.MustCompilePath("./premis:eventOutcomeInformation/premis:eventOutcomeDetail/premis:eventOutcomeDetailNote")
 )
 
-func (md *MetsData) handleEvents(amdSec *etree.Element) {
+func (md *FileData) handleEvents(amdSec *etree.Element) {
 	var agent string
 
 	// There should only be one objectNameEle
@@ -103,6 +111,22 @@ func (md *MetsData) handleEvents(amdSec *etree.Element) {
 		}
 	}
 	md.Agent = agent
+}
+
+func convertAllEvents(events []Event, agent string) map[string]PremisData {
+	dd := make(map[string]PremisData)
+	for _, e := range events {
+		file := filepath.Base(string(e.ObjectName))
+		entry, _ := dd[file]
+		entry.Events = append(entry.Events, e.Type)
+		entry.EventCount++
+		if e.Outcome {
+			entry.SuccessCount++
+		}
+		entry.Agent = agent
+		dd[file] = entry
+	}
+	return dd
 }
 
 func serializeEvents(e []Event) ([]byte, error) {
