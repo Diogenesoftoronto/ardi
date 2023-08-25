@@ -27,6 +27,7 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	go4.org v0.0.0-20200411211856-f5505b9728dd // indirect
-	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/exp v0.0.0-20230817173708-d852ddb80c63
+	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/text v0.10.0 // indirect
 )

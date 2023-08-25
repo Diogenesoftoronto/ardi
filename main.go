@@ -10,6 +10,7 @@ import (
 
 	"github.com/beevik/etree"
 	"github.com/charmbracelet/log"
+	"golang.org/x/exp/slices"
 )
 
 func main() {
@@ -44,16 +45,23 @@ Only two paths at a time is allowed`)
 	}
 	log.Infof("The comparison report is located in %s", dst)
 	w := csv.NewWriter(csvF)
+	csvDoc := make([][]string, 0)
 	defer w.Flush()
 	// example result of the csv
 	// file_1,file_2,events_1,events_2,agent_1,agent_2,eventCount_1,eventCount_2,successCount_1,successCount_2
 	// mets-2349.xml,mets-3453.xml,{[1:{"id":"<uuid>","format": "excel", "type": "creation", "outcome": "pass"}]},{[1:{"id":"<uuid>","format": "excel", "type": "creation", "outcome": "pass"}]},Archivematica,a3m,1,1,1,1
 	header := []string{
 		"file_1", "file_2", "event_diff", "agent_1", "agent_2", "eventCount_1", " eventCount_2", "successCount_1", "successCount_2"}
-	err = w.Write(header)
-	if err != nil {
-		log.Fatal(err)
-	}
+	csvDoc = append(csvDoc, header)
+	defer func(doc *[][]string) {
+		w.WriteAll(*doc)
+	}(&csvDoc)
+
+	// todo: consider handling the errors if the writer fails at some point
+	// err = w.Write(header)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	paths := os.Args[1:len(os.Args)]
 	data := make([]FileData, len(paths))
@@ -147,7 +155,7 @@ Only two paths at a time is allowed`)
 		ec2 := strconv.Itoa(data[i].EventCount)
 		es1 := strconv.Itoa(data[i-1].SuccesCount)
 		es2 := strconv.Itoa(data[i].SuccesCount)
-		w.Write([]string{
+		csvDoc = append(csvDoc, []string{
 			data[i-1].File,
 			data[i].File,
 			string(""),
@@ -155,29 +163,73 @@ Only two paths at a time is allowed`)
 			data[i].Agent,
 			ec1, ec2, es1, es2,
 		})
-		// After writing for the total counts for each mets file, we need to write the results for the other premi objects.
-		// We will need to loop through each object in the mets and output the results in the fields of the csv.
-		dd1, dd2 := convertAllEvents(data[i-1].Events, data[i-1].Agent), convertAllEvents(data[i].Events, data[i].Agent)
+		// After writing for the total counts for each mets file,
+		// we need to write the results for the other premi objects.
+		// We will need to loop through each object in the mets and
+		// output the results in the fields of the csv.
+		dd1, dd2 := convertAllEvents(data[i-1].Events,
+			data[i-1].Agent), convertAllEvents(data[i].Events,
+			data[i].Agent)
+		// log.Infof("%v \n %v", dd1, dd2)
+
+		// let's go through all unique keys for dd1, and dd2.
+		// if the key in one does not exist in the other we will need to do a check.
+		entries := [][]any{}
 		for k, v := range dd1 {
-			diffCmd := exec.Command("diff", "-u", fmt.Sprint(v.Events), fmt.Sprint(dd2[k].Events))
-			out, _ := diffCmd.Output()
-			if err != nil {
-				// if _, ok := err.(*exec.ExitError); ok {
-				log.Warnf("Ardi found differences between %s and %s for file %s", f1.Name(), f2.Name(), k)
-				// }
+			_, ok := dd2[k]
+			if !ok {
+				dd2[k] = PremisData{}
+			}
+			entries = append(entries, []any{k, v})
+		}
+		for k, v := range dd2 {
+			_, ok := dd1[k]
+			if !ok {
+				dd1[k] = PremisData{}
+				entries = append(entries, []any{k, v})
+			}
+		}
+		for _, entr := range entries {
+			pre := fmt.Sprintf("+++%s\n---%s\n\n", filepath.Base(f1.Name()), filepath.Base(f2.Name()))
+			diff := pre
+			k, _ := entr[0].(string)
+			v, _ := entr[1].(PremisData)
+			// We can think of each array of events as a set. If we
+			// think in this way we only need to check if an item
+			// in one set is contained in the other. This requires
+			// going through each set. But on the second set we don't
+			// need to check if it contains every item. Instead if
+			// we can get the id of the events then we can simply
+			// look at the length and determine which items are
+			// not contained in the first set.
+			// arg1, arg2 := v.Events[id], dd2[k].Events
+			for _, e := range v.Events {
+				if !slices.Contains(dd2[k].Events, e) {
+					diff += fmt.Sprintf("+++\t%s\n", e)
+				}
 
 			}
-			w.Write([]string{
+			for _, e := range dd2[k].Events {
+				if !slices.Contains(v.Events, e) {
+					diff += fmt.Sprintf("---\t%s\n", e)
+				}
+			}
+
+			csvDoc = append(csvDoc, []string{
 				k,
 				k,
-				string(out),
+				diff,
 				v.Agent,
-				fmt.Sprint(dd2[k].Agent),
-				fmt.Sprint(v.EventCount), fmt.Sprint(dd2[k].EventCount), fmt.Sprint(v.SuccessCount), fmt.Sprint(dd2[k].SuccessCount),
+				dd2[k].Agent,
+				strconv.Itoa(v.EventCount),
+				strconv.Itoa(dd2[k].EventCount),
+				strconv.Itoa(v.SuccessCount),
+				strconv.Itoa(dd2[k].SuccessCount),
 			})
 		}
 
 	}
+	// log.Info(csvDoc)
 	if err != nil {
 		log.Fatal("Could not get working directory")
 	}
