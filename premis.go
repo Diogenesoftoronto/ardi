@@ -10,6 +10,7 @@ import (
 
 type FileData struct {
 	// Id          int
+	Transfer    string
 	File        string //mets-342432.xml
 	Events      []Event
 	Agent       string // the preservation system e.g. Archivematica, a3m
@@ -46,9 +47,10 @@ var eventSecPath = etree.MustCompilePath(".//premis:event")
 // use. The path above is used as the roots for the paths below in my function
 // handle function.
 var (
-	objectNamePath  = etree.MustCompilePath(".//premis:object/premis:originalName")
-	eventTypePath   = etree.MustCompilePath("./premis:eventType")
-	eventAmountPath = etree.MustCompilePath("//premis:event/premis:eventType")
+	transferNamePath = etree.MustCompilePath("//dcterms:dublincore/dc:identifier")
+	objectNamePath   = etree.MustCompilePath(".//premis:object/premis:originalName")
+	eventTypePath    = etree.MustCompilePath("./premis:eventType")
+	eventAmountPath  = etree.MustCompilePath("//premis:event/premis:eventType")
 	// eventId         = etree.MustCompilePath(".//premis:event/premis:eventIdentifierValue")
 	agentPath       = etree.MustCompilePath(".//premis:agent/premis:agentIdentifier/premis:agentIdentifierValue")
 	eventDetailPath = etree.MustCompilePath("./premis:eventDetailInformation/premis:eventDetail")

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 
 	"github.com/beevik/etree"
@@ -52,7 +53,7 @@ Only two paths at a time is allowed`)
 	// file_1,file_2,events_1,events_2,agent_1,agent_2,eventCount_1,eventCount_2,successCount_1,successCount_2
 	// mets-2349.xml,mets-3453.xml,{[1:{"id":"<uuid>","format": "excel", "type": "creation", "outcome": "pass"}]},{[1:{"id":"<uuid>","format": "excel", "type": "creation", "outcome": "pass"}]},Archivematica,a3m,1,1,1,1
 	header := []string{
-		"file_1", "file_2", "event_diff", "agent_1", "agent_2", "eventCount_1", " eventCount_2", "successCount_1", "successCount_2"}
+		"transfer", "file_1", "file_2", "event_diff", "agent_1", "agent_2", "eventCount_1", " eventCount_2", "successCount_1", "successCount_2", "eventTypeCount_1", "eventTypeCount_2"}
 	csvDoc = append(csvDoc, header)
 	defer func(doc *[][]string) {
 		w.WriteAll(*doc)
@@ -92,6 +93,13 @@ Only two paths at a time is allowed`)
 			log.Fatalf("Could not parse the mets into an xml file. %v", err)
 		}
 		root := mets.Root()
+
+		// Get the name of the tranfer for the mets file
+		transfer := root.FindElementPath(transferNamePath).Text()
+		// Retrieve only the non slash characters
+		re := regexp.MustCompile("/")
+		transfer = string(re.ReplaceAll([]byte(transfer), []byte("")))
+		data[i].Transfer = transfer
 		// We need to get all the premis elements from the mets and count them.
 		// Use the correct namespace URI in your SelectElement and SelectElements methods.
 		// These are placeholders and might need to be adjusted according to your XML.
@@ -230,12 +238,12 @@ Only two paths at a time is allowed`)
 				}
 			}
 
-			jsd, err := json.Marshal(etm)
+			jsd, err := json.MarshalIndent(etm, "", "\t")
 			if err != nil {
 				log.Warn(err)
 			}
 
-			jsd2, err := json.Marshal(etm2)
+			jsd2, err := json.MarshalIndent(etm2, "", "\t")
 			if err != nil {
 				log.Warn(err)
 			}
