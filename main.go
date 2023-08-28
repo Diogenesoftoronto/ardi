@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -189,9 +190,10 @@ Only two paths at a time is allowed`)
 				entries = append(entries, []any{k, v})
 			}
 		}
+		eTypes := []string{}
 		for _, entr := range entries {
-			pre := fmt.Sprintf("+++%s\n---%s\n\n", filepath.Base(f1.Name()), filepath.Base(f2.Name()))
-			diff := pre
+			// pre := fmt.Sprintf("+++%s\n---%s\n\n", filepath.Base(f1.Name()), filepath.Base(f2.Name()))
+			diff := ""
 			k, _ := entr[0].(string)
 			v, _ := entr[1].(PremisData)
 			// We can think of each array of events as a set. If we
@@ -203,32 +205,58 @@ Only two paths at a time is allowed`)
 			// look at the length and determine which items are
 			// not contained in the first set.
 			// arg1, arg2 := v.Events[id], dd2[k].Events
-			for _, e := range v.Events {
+			etm := make(map[string]int)
+			for _, e := range dd1[k].Events {
+				etm[e]++
 				if !slices.Contains(dd2[k].Events, e) {
 					diff += fmt.Sprintf("+++\t%s\n", e)
 				}
+				if !slices.Contains(eTypes, e) {
+					eTypes = append(eTypes, e)
+					// Once we come across a unique event we will record how
+					// many such events occured in total.
+
+				}
 
 			}
+			etm2 := make(map[string]int)
 			for _, e := range dd2[k].Events {
+				etm2[e]++
 				if !slices.Contains(v.Events, e) {
 					diff += fmt.Sprintf("---\t%s\n", e)
 				}
+				if !slices.Contains(eTypes, e) {
+					eTypes = append(eTypes, e)
+				}
 			}
 
+			jsd, err := json.Marshal(etm)
+			if err != nil {
+				log.Warn(err)
+			}
+
+			jsd2, err := json.Marshal(etm2)
+			if err != nil {
+				log.Warn(err)
+			}
 			csvDoc = append(csvDoc, []string{
 				k,
 				k,
 				diff,
-				v.Agent,
+				dd1[k].Agent,
 				dd2[k].Agent,
-				strconv.Itoa(v.EventCount),
+				strconv.Itoa(dd1[k].EventCount),
 				strconv.Itoa(dd2[k].EventCount),
-				strconv.Itoa(v.SuccessCount),
+				strconv.Itoa(dd1[k].SuccessCount),
 				strconv.Itoa(dd2[k].SuccessCount),
+				string(jsd),
+				string(jsd2),
 			})
 		}
 
+		// csvDoc[0] = append(csvDoc[0], eTypes...)
 	}
+
 	// log.Info(csvDoc)
 	if err != nil {
 		log.Fatal("Could not get working directory")
