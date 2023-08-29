@@ -237,7 +237,7 @@ USAGE: ardi <path> <path...>`)
 			for _, e := range dd1[k].Events {
 				etm[e]++
 				if !slices.Contains(dd2[k].Events, e) {
-					diff += fmt.Sprintf("+++\t%s\n", e)
+					diff += fmt.Sprintf("\n+++ %s", e)
 				}
 				if !slices.Contains(eTypes, e) {
 					eTypes = append(eTypes, e)
@@ -248,7 +248,7 @@ USAGE: ardi <path> <path...>`)
 			for _, e := range dd2[k].Events {
 				etm2[e]++
 				if !slices.Contains(dd1[k].Events, e) {
-					diff += fmt.Sprintf("---\t%s\n", e)
+					diff += fmt.Sprintf("\n--- %s", e)
 				}
 				if !slices.Contains(eTypes, e) {
 					eTypes = append(eTypes, e)
