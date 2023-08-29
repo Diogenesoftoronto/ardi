@@ -1,3 +1,4 @@
+![arditape](./examples/demo.gif)
 # Ardi the Archive-differ
 
 The archive differ is an application that takes an archived bag in the Bagit
