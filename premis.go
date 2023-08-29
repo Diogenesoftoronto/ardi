@@ -89,7 +89,8 @@ func (md *FileData) handleEvents(amdSec *etree.Element) {
 			outcomeText := strings.ToLower(outcomeEle.Text())
 			event.Outcome = strings.Contains(outcomeText, "pass") ||
 				strings.Contains(outcomeText, "positive") ||
-				strings.Contains(outcomeText, "transcribed")
+				strings.Contains(outcomeText, "transcribed") ||
+				(outcomeText == "")
 		}
 
 		if oDetailEle != nil {

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,21 +16,35 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+func init() {
+
+	const UsageMessage = `Ardi is an archive differ. It takes Bags and compares them with each other.
+For more information checkout the README file.
+
+This command requires a path to be given.
+
+USAGE: ardi <path> <path...>
+The ... means that you can compare any EVEN number of Bags.
+
+The result's path will be displayed on a successful comparison`
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), UsageMessage)
+		flag.PrintDefaults()
+	}
+}
 func main() {
+	flag.Parse()
 	// Open the archive
-	argAmount := len(os.Args)
-	if argAmount < 3 {
+	argAmount := len(flag.Args())
+	if argAmount < 2 {
 		log.Fatal(`There were not enough arguments.
 
 This command requires a path to be given.
 
 USAGE: ardi <path> <path...>`)
-	} else if argAmount%3 != 0 {
-		log.Fatal(`There must be an even number of arguments given
-			
-Only two paths at a time is allowed`)
-	}
-	// The paths that will be used are the args until the end of the
+	} else if argAmount%2 != 0 {
+		log.Fatal(`There must be an EVEN number of arguments given`)
+	} // The paths that will be used are the args until the end of the
 	// array. We will actually test if they are all valid first.
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -56,7 +71,9 @@ Only two paths at a time is allowed`)
 		"transfer", "file_1", "file_2", "event_diff", "agent_1", "agent_2", "eventCount_1", " eventCount_2", "successCount_1", "successCount_2", "eventTypeCount_1", "eventTypeCount_2"}
 	csvDoc = append(csvDoc, header)
 	defer func(doc *[][]string) {
-		w.WriteAll(*doc)
+		if err := w.WriteAll(*doc); err != nil {
+			log.Fatal(err)
+		}
 	}(&csvDoc)
 
 	// todo: consider handling the errors if the writer fails at some point
@@ -65,7 +82,8 @@ Only two paths at a time is allowed`)
 	// 	log.Fatal(err)
 	// }
 
-	paths := os.Args[1:len(os.Args)]
+	paths := flag.Args()
+	log.Info(paths)
 	data := make([]FileData, len(paths))
 	for i, path := range paths {
 		absPath, err := filepath.Abs(path)
@@ -165,6 +183,7 @@ Only two paths at a time is allowed`)
 		es1 := strconv.Itoa(data[i-1].SuccesCount)
 		es2 := strconv.Itoa(data[i].SuccesCount)
 		csvDoc = append(csvDoc, []string{
+			transfer,
 			data[i-1].File,
 			data[i].File,
 			string(""),
@@ -213,6 +232,7 @@ Only two paths at a time is allowed`)
 			// look at the length and determine which items are
 			// not contained in the first set.
 			// arg1, arg2 := v.Events[id], dd2[k].Events
+			_ = v
 			etm := make(map[string]int)
 			for _, e := range dd1[k].Events {
 				etm[e]++
@@ -221,16 +241,13 @@ Only two paths at a time is allowed`)
 				}
 				if !slices.Contains(eTypes, e) {
 					eTypes = append(eTypes, e)
-					// Once we come across a unique event we will record how
-					// many such events occured in total.
-
 				}
 
 			}
 			etm2 := make(map[string]int)
 			for _, e := range dd2[k].Events {
 				etm2[e]++
-				if !slices.Contains(v.Events, e) {
+				if !slices.Contains(dd1[k].Events, e) {
 					diff += fmt.Sprintf("---\t%s\n", e)
 				}
 				if !slices.Contains(eTypes, e) {
@@ -248,6 +265,7 @@ Only two paths at a time is allowed`)
 				log.Warn(err)
 			}
 			csvDoc = append(csvDoc, []string{
+				transfer,
 				k,
 				k,
 				diff,
