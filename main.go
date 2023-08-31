@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/beevik/etree"
 	"github.com/charmbracelet/log"
@@ -68,7 +69,7 @@ USAGE: ardi <path> <path...>`)
 	// file_1,file_2,events_1,events_2,agent_1,agent_2,eventCount_1,eventCount_2,successCount_1,successCount_2
 	// mets-2349.xml,mets-3453.xml,{[1:{"id":"<uuid>","format": "excel", "type": "creation", "outcome": "pass"}]},{[1:{"id":"<uuid>","format": "excel", "type": "creation", "outcome": "pass"}]},Archivematica,a3m,1,1,1,1
 	header := []string{
-		"transfer", "file_1", "file_2", "event_diff", "agent_1", "agent_2", "eventCount_1", " eventCount_2", "successCount_1", "successCount_2", "eventTypeCount_1", "eventTypeCount_2"}
+		"transfer", "file_1", "file_2", "file type", "event_diff", "agent_1", "agent_2", "eventCount_1", " eventCount_2", "successCount_1", "successCount_2", "eventTypeCount_1", "eventTypeCount_2"}
 	csvDoc = append(csvDoc, header)
 	defer func(doc *[][]string) {
 		if err := w.WriteAll(*doc); err != nil {
@@ -186,6 +187,7 @@ USAGE: ardi <path> <path...>`)
 			transfer,
 			data[i-1].File,
 			data[i].File,
+			filepath.Ext(data[i].File)[1:],
 			string(""),
 			data[i-1].Agent,
 			data[i].Agent,
@@ -255,12 +257,12 @@ USAGE: ardi <path> <path...>`)
 				}
 			}
 
-			jsd, err := json.MarshalIndent(etm, "", "\t")
+			jsd, err := json.MarshalIndent(etm, "", " ")
 			if err != nil {
 				log.Warn(err)
 			}
 
-			jsd2, err := json.MarshalIndent(etm2, "", "\t")
+			jsd2, err := json.MarshalIndent(etm2, "", " ")
 			if err != nil {
 				log.Warn(err)
 			}
@@ -268,6 +270,7 @@ USAGE: ardi <path> <path...>`)
 				transfer,
 				k,
 				k,
+				strings.ToLower(filepath.Ext(k))[1:],
 				diff,
 				dd1[k].Agent,
 				dd2[k].Agent,
