@@ -13,7 +13,7 @@ import (
 	z7 "github.com/bodgit/sevenzip"
 )
 
-var (
+const (
 	ZIP = ".zip"
 	TAR = ".tar"
 	Z7  = ".7z"

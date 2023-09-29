@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"encoding/json"
@@ -40,46 +40,46 @@ type PremisData struct {
 // a priority feature.
 // Get all the amdSecs instead of searching from the root directly search
 // through the amdSecPath do this for each section.
-var amdSecPath = etree.MustCompilePath("//mets:amdSec")
-var eventSecPath = etree.MustCompilePath(".//premis:event")
+var AmdSecPath = etree.MustCompilePath("//mets:amdSec")
+var EventSecPath = etree.MustCompilePath(".//premis:event")
 
 // I seperate the variables here to give further clarity as to their priority and
 // use. The path above is used as the roots for the paths below in my function
 // handle function.
 var (
-	transferNamePath = etree.MustCompilePath("//dcterms:dublincore/dc:identifier")
-	objectNamePath   = etree.MustCompilePath(".//premis:object/premis:originalName")
-	eventTypePath    = etree.MustCompilePath("./premis:eventType")
-	eventAmountPath  = etree.MustCompilePath("//premis:event/premis:eventType")
+	TransferNamePath = etree.MustCompilePath("//dcterms:dublincore/dc:identifier")
+	ObjectNamePath   = etree.MustCompilePath(".//premis:object/premis:originalName")
+	EventTypePath    = etree.MustCompilePath("./premis:eventType")
+	EventAmountPath  = etree.MustCompilePath("//premis:event/premis:eventType")
 	// eventId         = etree.MustCompilePath(".//premis:event/premis:eventIdentifierValue")
-	agentPath       = etree.MustCompilePath(".//premis:agent/premis:agentIdentifier/premis:agentIdentifierValue")
-	eventDetailPath = etree.MustCompilePath("./premis:eventDetailInformation/premis:eventDetail")
-	outcomePath     = etree.MustCompilePath("./premis:eventOutcomeInformation/premis:eventOutcome")
-	oDetailPath     = etree.MustCompilePath("./premis:eventOutcomeInformation/premis:eventOutcomeDetail/premis:eventOutcomeDetailNote")
+	AgentPath       = etree.MustCompilePath(".//premis:agent/premis:agentIdentifier/premis:agentIdentifierValue")
+	EventDetailPath = etree.MustCompilePath("./premis:eventDetailInformation/premis:eventDetail")
+	OutcomePath     = etree.MustCompilePath("./premis:eventOutcomeInformation/premis:eventOutcome")
+	ODetailPath     = etree.MustCompilePath("./premis:eventOutcomeInformation/premis:eventOutcomeDetail/premis:eventOutcomeDetailNote")
 )
 
-func (md *FileData) handleEvents(amdSec *etree.Element) {
+func (md *FileData) HandleEvents(amdSec *etree.Element) {
 	var agent string
 
 	// There should only be one objectNameEle
-	objectNameEle := amdSec.FindElementPath(objectNamePath)
+	objectNameEle := amdSec.FindElementPath(ObjectNamePath)
 	// There should only ever be one agent
-	agentEles := amdSec.FindElementsPath(agentPath)
+	agentEles := amdSec.FindElementsPath(AgentPath)
 
 	// Get all events from amdSec
-	prs := amdSec.FindElementsPath(eventSecPath)
+	prs := amdSec.FindElementsPath(EventSecPath)
 
 	// Loop through all the elements in the amd section that have been given.
 	for _, pr := range prs {
 		event := &Event{
-			Type:       pr.FindElementPath(eventTypePath).Text(),
+			Type:       pr.FindElementPath(EventTypePath).Text(),
 			ObjectName: objectNameEle.Text(),
 		}
 
 		// Process event details, outcomes, and outcome details
-		detailEle := pr.FindElementPath(eventDetailPath)
-		outcomeEle := pr.FindElementPath(outcomePath)
-		oDetailEle := pr.FindElementPath(oDetailPath)
+		detailEle := pr.FindElementPath(EventDetailPath)
+		outcomeEle := pr.FindElementPath(OutcomePath)
+		oDetailEle := pr.FindElementPath(ODetailPath)
 
 		if detailEle != nil {
 			event.EventDetail = detailEle.Text()
@@ -116,7 +116,7 @@ func (md *FileData) handleEvents(amdSec *etree.Element) {
 	md.Agent = agent
 }
 
-func convertAllEvents(events []Event, agent string) map[string]PremisData {
+func ConvertAllEvents(events []Event, agent string) map[string]PremisData {
 	dd := make(map[string]PremisData)
 	for _, e := range events {
 		file := filepath.Base(string(e.ObjectName))
@@ -132,7 +132,7 @@ func convertAllEvents(events []Event, agent string) map[string]PremisData {
 	return dd
 }
 
-func serializeEvents(e []Event) ([]byte, error) {
+func SerializeEvents(e []Event) ([]byte, error) {
 	jsd, err := json.MarshalIndent(e, "", "\t")
 	if err != nil {
 		return jsd, err
