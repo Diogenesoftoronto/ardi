@@ -14,6 +14,8 @@ import (
 
 	"github.com/beevik/etree"
 	"github.com/charmbracelet/log"
+	"github.com/diogenesoftoronto/ardi/internal/mets"
+	"github.com/diogenesoftoronto/ardi/internal/premis"
 	"golang.org/x/exp/slices"
 )
 
@@ -85,10 +87,10 @@ USAGE: ardi <path> <path...>`)
 
 	paths := flag.Args()
 	log.Info(paths)
-	data := make([]FileData, len(paths))
+	data := make([]premis.FileData, len(paths))
 	for i, path := range paths {
 		absPath, err := filepath.Abs(path)
-		tmpMets, err := CopyMets(absPath, dst)
+		tmpMets, err := mets.CopyMets(absPath, dst)
 		defer func() {
 			if tmpMets != nil {
 				err := tmpMets.Close()
@@ -114,7 +116,7 @@ USAGE: ardi <path> <path...>`)
 		root := mets.Root()
 
 		// Get the name of the tranfer for the mets file
-		transfer := root.FindElementPath(transferNamePath).Text()
+		transfer := root.FindElementPath(premis.transferNamePath).Text()
 		// Retrieve only the non slash characters
 		re := regexp.MustCompile("/")
 		transfer = string(re.ReplaceAll([]byte(transfer), []byte("")))
@@ -124,14 +126,14 @@ USAGE: ardi <path> <path...>`)
 		// These are placeholders and might need to be adjusted according to your XML.
 		// You can find the namespace URI in the XML file, it is the URL specified in the xmlns attribute.
 		// This is all the amd sections for each mets.
-		amdSecs := root.FindElementsPath(amdSecPath)
+		amdSecs := root.FindElementsPath(premis.amdSecPath)
 		// We need to diff the events somehow, I am considering that we just use the difftool for now and then add the diff to the csv.
 
 		// At some point we could decide to go through all the events figureout how
 		// many there are before handling them and assigning an slice with that length
 		// in order to save memory but I don't think that is worth it.
 
-		eventTotal := len(root.FindElementsPath(eventAmountPath))
+		eventTotal := len(root.FindElementsPath(premis.eventAmountPath))
 		data[i].EventCount = eventTotal
 		for _, sec := range amdSecs {
 			data[i].handleEvents(sec)
@@ -152,11 +154,11 @@ USAGE: ardi <path> <path...>`)
 		}
 		defer f1.Close()
 		defer f2.Close()
-		json1, err := serializeEvents(data[i-1].Events)
+		json1, err := premis.serializeEvents(data[i-1].Events)
 		if err != nil {
 			panic(err)
 		}
-		json2, err := serializeEvents(data[i].Events)
+		json2, err := premis.serializeEvents(data[i].Events)
 		if err != nil {
 			panic(err)
 		}
@@ -197,8 +199,8 @@ USAGE: ardi <path> <path...>`)
 		// we need to write the results for the other premi objects.
 		// We will need to loop through each object in the mets and
 		// output the results in the fields of the csv.
-		dd1, dd2 := convertAllEvents(data[i-1].Events,
-			data[i-1].Agent), convertAllEvents(data[i].Events,
+		dd1, dd2 := premis.convertAllEvents(data[i-1].Events,
+			data[i-1].Agent), premis.convertAllEvents(data[i].Events,
 			data[i].Agent)
 		// log.Infof("%v \n %v", dd1, dd2)
 
@@ -208,14 +210,14 @@ USAGE: ardi <path> <path...>`)
 		for k, v := range dd1 {
 			_, ok := dd2[k]
 			if !ok {
-				dd2[k] = PremisData{}
+				dd2[k] = premis.PremisData{}
 			}
 			entries = append(entries, []any{k, v})
 		}
 		for k, v := range dd2 {
 			_, ok := dd1[k]
 			if !ok {
-				dd1[k] = PremisData{}
+				dd1[k] = premis.PremisData{}
 				entries = append(entries, []any{k, v})
 			}
 		}
@@ -224,7 +226,7 @@ USAGE: ardi <path> <path...>`)
 			// pre := fmt.Sprintf("+++%s\n---%s\n\n", filepath.Base(f1.Name()), filepath.Base(f2.Name()))
 			diff := ""
 			k, _ := entr[0].(string)
-			v, _ := entr[1].(PremisData)
+			v, _ := entr[1].(premis.PremisData)
 			// We can think of each array of events as a set. If we
 			// think in this way we only need to check if an item
 			// in one set is contained in the other. This requires
