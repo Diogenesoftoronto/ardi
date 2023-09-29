@@ -12,10 +12,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Diogenesoftoronto/ardi/internal/mets"
+	"github.com/Diogenesoftoronto/ardi/internal/premis"
 	"github.com/beevik/etree"
 	"github.com/charmbracelet/log"
-	"github.com/diogenesoftoronto/ardi/internal/mets"
-	"github.com/diogenesoftoronto/ardi/internal/premis"
 	"golang.org/x/exp/slices"
 )
 
