@@ -3,10 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
-	"github.com/Diogenesoftoronto/ardi/internal/mets"
+	mets "github.com/Diogenesoftoronto/ardi/internal/mets"
 	"github.com/charmbracelet/bubbles/filepicker"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -89,5 +90,13 @@ func (m model) View() string {
 func main() {
 	fp := filepicker.New()
 	// allowed extensions
-	fp.AllowedTypes = [mets.ZIP, mets.TAR, mets.Z7, mets.XML]
+	fp.AllowedTypes = []string{mets.ZIP, mets.TAR, mets.Z7, mets.XML}
+	fp.CurrentDirectory, _ = os.UserHomeDir()
+
+	m := model{
+		picker: fp,
+	}
+	tm, _ := tea.NewProgram(&m, tea.WithOutput(os.Stderr)).Run()
+	mm := tm.(model)
+	fmt.Println("\n You selected: " + m.picker.Styles.Selected.Render(mm.selected) + "\n")
 }
